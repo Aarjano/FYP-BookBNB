@@ -12,12 +12,19 @@ import {
     MenuItem,
     IconButton
 } from '@mui/material';
+import BookList from './components/BookList';
+import MyRentals from './components/MyRentals';
 import Login from './components/Login';
 import Register from './components/Register';
 import Home from './components/Home';
+import MyBooks from './components/MyBooks';
+import ChatList from './components/ChatList';
+import ChatPage from './components/ChatPage';
+import Profile from './components/Profile';
 import { getCurrentUser, logout } from './services/auth';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import ChatIcon from '@mui/icons-material/Chat';
+import BookDetail from './components/BookDetail';
 
 // Custom event for login state changes
 export const loginStateChanged = new Event('loginStateChanged');
@@ -151,6 +158,7 @@ function App() {
                             path="/books"
                             element={
                                 <ProtectedRoute>
+                                    <BookList />
                                 </ProtectedRoute>
                             }
                         />
@@ -158,6 +166,7 @@ function App() {
                             path="/my-books"
                             element={
                                 <ProtectedRoute>
+                                    <MyBooks />
                                 </ProtectedRoute>
                             }
                         />
@@ -165,6 +174,7 @@ function App() {
                             path="/my-rentals"
                             element={
                                 <ProtectedRoute>
+                                    <MyRentals />
                                 </ProtectedRoute>
                             }
                         />
@@ -172,6 +182,7 @@ function App() {
                             path="/profile"
                             element={
                                 <ProtectedRoute>
+                                    <Profile />
                                 </ProtectedRoute>
                             }
                         />
@@ -181,6 +192,7 @@ function App() {
                                     path="/book/:id"
                                     element={
                                         <ProtectedRoute>
+                                            <BookDetail currentUserId={user.id} />
                                         </ProtectedRoute>
                                     }
                                 />
@@ -188,6 +200,7 @@ function App() {
                                     path="/chat"
                                     element={
                                         <ProtectedRoute>
+                                            <ChatList currentUserId={user.id} />
                                         </ProtectedRoute>
                                     }
                                 />
@@ -195,6 +208,7 @@ function App() {
                                     path="/chat/:chatId"
                                     element={
                                         <ProtectedRoute>
+                                            <ChatPage currentUserId={user.id} />
                                         </ProtectedRoute>
                                     }
                                 />
