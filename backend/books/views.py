@@ -1,11 +1,12 @@
 from django.shortcuts import render
 from rest_framework import viewsets, status, permissions, filters
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from django.utils import timezone
 from datetime import timedelta
-from .models import Book, BookRental, BookReview,BookPurchase
-from .serializers import BookSerializer, BookRentalSerializer, BookReviewSerializer,BookPurchaseSerializer
+from .models import Book, BookRental, BookReview, BookPurchase, PaymentMethod
+from django.contrib.auth.models import User
+from .serializers import BookSerializer, BookRentalSerializer, BookReviewSerializer, BookPurchaseSerializer, UserSerializer, PaymentMethodSerializer
 from mongoengine.queryset.visitor import Q
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.core.exceptions import ValidationError
@@ -696,3 +697,78 @@ class BookPurchaseViewSet(MongoModelViewSet):
             logger.error(f"Error in purchase_requests: {str(e)}")
             return Response({'error': 'Failed to retrieve purchase requests'},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_user_details(request, user_id):
+    try:
+        user = User.objects.get(id=user_id)
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error in get_user_details: {str(e)}")
+        return Response({'error': 'Failed to fetch user details'}, status=500)
+
+class PaymentMethodViewSet(viewsets.ModelViewSet):
+    serializer_class = PaymentMethodSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'put', 'patch', 'delete']
+
+    def get_queryset(self):
+        return PaymentMethod.objects.filter(user=self.request.user)
+
+    def get_object(self):
+        try:
+            return PaymentMethod.objects.get(user=self.request.user)
+        except PaymentMethod.DoesNotExist:
+            return None
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def get_by_email(self, request):
+        try:
+            email = request.query_params.get('email')
+            if not email:
+                return Response(
+                    {"error": "Email parameter is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user = User.objects.get(email=email)
+            payment_method = PaymentMethod.objects.get(user=user)
+            serializer = self.get_serializer(payment_method)
+            return Response(serializer.data)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except PaymentMethod.DoesNotExist:
+            return Response(
+                {"error": "Payment method not found for this user"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error in get_by_email: {str(e)}")
+            return Response(
+                {"error": "Failed to fetch payment information"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAdminUser])
+def get_all_users(request):
+    try:
+        users = User.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
+    except Exception as e:
+        logger.error(f"Error in get_all_users: {str(e)}")
+        return Response({'error': 'Failed to fetch users'}, status=500)

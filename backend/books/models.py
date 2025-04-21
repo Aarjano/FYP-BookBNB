@@ -2,6 +2,8 @@ from mongoengine import Document, StringField, IntField, DecimalField, BooleanFi
 from django.utils import timezone
 import uuid
 from bson import ObjectId
+from django.db import models
+from django.contrib.auth.models import User
 
 class Book(Document):
     _id = ObjectIdField(primary_key=True, default=ObjectId)
@@ -157,3 +159,23 @@ class BookPurchase(Document):
 
     def __str__(self):
         return f"Purchase of {self.book.title} by user {self.buyer_id}"
+
+class PaymentMethod(models.Model):
+    PAYMENT_CHOICES = [
+        ('esewa', 'eSewa'),
+        ('khalti', 'Khalti'),
+        ('imepay', 'IME Pay'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='payment_method')
+    method = models.CharField(max_length=10, choices=PAYMENT_CHOICES)
+    mobile_number = models.CharField(max_length=15)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.get_method_display()}"
+
+    class Meta:
+        verbose_name = 'Payment Method'
+        verbose_name_plural = 'Payment Methods'

@@ -80,4 +80,42 @@ export const requestPurchase = (bookId) =>
 export const approvePurchase = (purchaseId) => api.post(`/purchases/${purchaseId}/approve_purchase/`);
 export const rejectPurchase = (purchaseId) => api.post(`/purchases/${purchaseId}/reject_purchase/`);
 
+export const getUserById = async (userId) => {
+    try {
+        const response = await api.get(`/users/${userId}/`);
+        if (response.data && response.data.email) {
+            return response;
+        } else {
+            throw new Error('Invalid user data received');
+        }
+    } catch (error) {
+        console.error('Error fetching user:', error);
+        // Return a default user object if the request fails
+        return {
+            data: {
+                id: userId,
+                email: 'Unknown User',
+                username: 'Unknown User',
+                first_name: '',
+                last_name: ''
+            }
+        };
+    }
+};
+
+// Payment endpoints
+export const getPaymentInfo = () => api.get('/payment-methods/');
+export const updatePaymentInfo = (data) => {
+    // First try POST, if that fails try PUT
+    return api.post('/payment-methods/', data)
+        .catch(error => {
+            if (error.response?.status === 405) {
+                return api.put('/payment-methods/', data);
+            }
+            throw error;
+        });
+};
+export const getPaymentInfoById = (userId) => api.get(`/payment-methods/${userId}/get_payment_info/`);
+export const getPaymentInfoByEmail = (email) => api.get(`/payment-methods/get_by_email/?email=${email}`);
+
 export default api; 

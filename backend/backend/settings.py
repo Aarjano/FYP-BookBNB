@@ -92,10 +92,11 @@ DATABASES = {
 }
 
 # MongoDB connection
-MONGODB_HOST = 'mongodb+srv://test123:test123@cluster0.j6j4a.mongodb.net/book_rental_db?retryWrites=true&w=majority&appName=Cluster0'
+MONGODB_HOST = 'mongodb+srv://test123:test123@cluster0.j6j4a.mongodb.net/book_rental_db_new?retryWrites=true&w=majority&appName=Cluster0'
 
 # Connect to MongoDB
 mongoengine.connect(host=MONGODB_HOST)
+print("Successfully connected to MongoDB database!")
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

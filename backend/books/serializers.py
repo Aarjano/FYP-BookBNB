@@ -1,13 +1,31 @@
 from rest_framework import serializers
-from .models import Book, BookRental, BookReview, BookPurchase
+from .models import Book, BookRental, BookReview, BookPurchase, PaymentMethod
 from users.serializers import UserProfileSerializer
+from django.contrib.auth.models import User
 
-class UserSerializer(serializers.Serializer):
-    id = serializers.CharField()
-    username = serializers.CharField()
-    email = serializers.EmailField()
-    first_name = serializers.CharField()
-    last_name = serializers.CharField()
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'is_staff', 'is_superuser']
+        read_only_fields = ['id', 'is_staff', 'is_superuser']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['is_admin'] = instance.is_staff or instance.is_superuser
+        return data
+
+class PaymentMethodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentMethod
+        fields = ['method', 'mobile_number']
+        read_only_fields = ['created_at', 'updated_at']
+
+    def validate_mobile_number(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError("Mobile number should contain only digits")
+        if len(value) < 10 or len(value) > 15:
+            raise serializers.ValidationError("Mobile number should be between 10 and 15 digits")
+        return value
 
 class BookSerializer(serializers.Serializer):
     id = serializers.CharField(source='_id', read_only=True)  # Maps to MongoDB's _id field
@@ -104,6 +122,7 @@ class BookReviewSerializer(serializers.Serializer):
     book = BookSerializer(read_only=True)  # Serializer for the referenced Book
     book_id = serializers.CharField(write_only=True)  # Required when creating review
     reviewer_id = serializers.IntegerField(required=True)  # User ID
+    reviewer_name = serializers.SerializerMethodField()  # Add reviewer name field
     rating = serializers.IntegerField(min_value=1, max_value=5)  # Consistent type
     review_text = serializers.CharField(allow_blank=True, required=False)
     helpful_votes = serializers.IntegerField(read_only=True, default=0)
@@ -111,6 +130,13 @@ class BookReviewSerializer(serializers.Serializer):
     review_metadata = serializers.DictField(read_only=True, default=dict)
     created_at = serializers.DateTimeField(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)
+
+    def get_reviewer_name(self, obj):
+        try:
+            user = User.objects.get(id=obj.reviewer_id)
+            return user.username
+        except User.DoesNotExist:
+            return "Anonymous"
 
     def create(self, validated_data):
         """Creates a new review and updates book rating."""

@@ -63,23 +63,34 @@ class RegisterSerializer(serializers.Serializer):
                     last_name=validated_data.get('last_name', '')
                 )
 
-                # Create MongoDB UserProfile
-                try:
-                    profile = UserProfile(
-                        user_id=user.id,
-                        username=user.username,
-                        email=user.email,
-                        first_name=user.first_name,
-                        last_name=user.last_name,
-                        location=location
-                    )
-                    profile.save()
-                except Exception as profile_error:
-                    # If profile creation fails, delete the user
-                    user.delete()
-                    raise serializers.ValidationError({
-                        "profile": f"Failed to create user profile: {str(profile_error)}"
-                    })
+                # Check if profile already exists
+                existing_profile = UserProfile.objects.filter(user_id=user.id).first()
+                if existing_profile:
+                    # Update existing profile instead of creating new one
+                    existing_profile.username = user.username
+                    existing_profile.email = user.email
+                    existing_profile.first_name = user.first_name
+                    existing_profile.last_name = user.last_name
+                    existing_profile.location = location
+                    existing_profile.save()
+                else:
+                    # Create new MongoDB UserProfile
+                    try:
+                        profile = UserProfile(
+                            user_id=user.id,
+                            username=user.username,
+                            email=user.email,
+                            first_name=user.first_name,
+                            last_name=user.last_name,
+                            location=location
+                        )
+                        profile.save()
+                    except Exception as profile_error:
+                        # If profile creation fails, delete the user
+                        user.delete()
+                        raise serializers.ValidationError({
+                            "profile": f"Failed to create user profile: {str(profile_error)}"
+                        })
 
                 return user
 
@@ -97,6 +108,7 @@ class RegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError({
                 "error": f"Failed to create user: {str(e)}"
             })
+
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
